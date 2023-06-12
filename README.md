@@ -1,2 +1,2 @@
 # ComTpassERC721
-ComTpassERC721 is an ERC721-based contract for creating, selling, and transferring authenticated digital passes. It offers features like whitelists, VIP upgrades, and authenticity verification, making it ideal for decentralized applications.
+ComTpassERC721 is an ERC721-based non-fungible token (NFT) contract. It enables the creation, sale, and transfer of authenticated digital passes. The contract implements features such as access control whitelists, VIP upgrade pricing, supply and minting limits, and authenticity verification. This contract is designed to provide a secure and scalable solution for issuing and managing digital passes in decentralized applications.
