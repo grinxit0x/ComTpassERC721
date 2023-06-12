@@ -83,7 +83,17 @@ contract ComTpassERC721 is
         setMaxSupply(_initMaxSupply);
         setMaxMintAmount(_initMaxMintAmount);
         setVipPrice(_initVipPrice);
-        mint(msg.sender, 20);
+        _whitelisted[msg.sender] = true;
+        _vipList[msg.sender] = true;
+        mint(msg.sender, 2);
+    }
+
+    /**
+     * @dev Allows the owner to add an address to the VIP list
+     * @param addr The address to be added to the VIP list
+     */
+    function addToVIPList(address addr) public onlyOwner {
+        _vipList[addr] = true;
     }
 
     /**
@@ -97,10 +107,21 @@ contract ComTpassERC721 is
     }
 
     /**
+     * @dev Allows admins or the owner to add an address to the whitelist
+     * @param addr The address to be added to the whitelist
+     */
+    function addToWhitelist(address addr) public onlyAdminOrOwner {
+        _whitelisted[addr] = true;
+    }
+
+    /**
      * @dev Allows admins or the owner to add addresses to the whitelist
      * @param addresses The addresses to be added to the whitelist
      */
-    function addToWhitelist(address[] memory addresses) public onlyAdminOrOwner {
+    function addToWhitelist(address[] memory addresses)
+        public
+        onlyAdminOrOwner
+    {
         for (uint256 i = 0; i < addresses.length; i++) {
             _whitelisted[addresses[i]] = true;
         }
@@ -111,7 +132,7 @@ contract ComTpassERC721 is
      */
     function becomeVIP() public payable {
         require(!_vipList[msg.sender], "Already a VIP");
-        require(msg.value == _vipPrice, "Incorrect VIP price");
+        require(msg.value <= _vipPrice, "Incorrect VIP price");
 
         _vipList[msg.sender] = true;
     }
@@ -184,6 +205,31 @@ contract ComTpassERC721 is
         _vipPrice = newVipPrice;
     }
 
+    /**
+     * @dev Mints a new NFT to the specified recipient
+     * @param to The address of the recipient
+     */
+    function mint(address to) public payable whenNotPaused {
+        uint256 supply = totalSupply();
+
+        // Check if the sender is whitelisted
+        require(_whitelisted[msg.sender], "Not whitelisted");
+
+        // Check if the sale is not paused
+        require(!paused(), "Sale paused");
+
+        // Check if the maximum supply has not been reached
+        require(supply < _maxSupply, "Exceeds max supply");
+
+        // Check if the correct amount of Ether was sent
+        require(msg.value >= _cost, "Ether value sent is not correct");
+
+        // Mint a new token
+        _safeMint(to, supply + 1);
+
+        // Set the token URI for the minted token
+        _setTokenURI(supply + 1, tokenURI(supply + 1));
+    }
 
     /**
      * @dev Mints NFTs to the specified recipient
