@@ -15,7 +15,12 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
-contract ComTpassERC721 is ERC721Enumerable, ERC721URIStorage, Ownable, Pausable {
+contract ComTpassERC721 is
+    ERC721Enumerable,
+    ERC721URIStorage,
+    Ownable,
+    Pausable
+{
     using Strings for uint256;
 
     // Configuration variables
@@ -39,12 +44,19 @@ contract ComTpassERC721 is ERC721Enumerable, ERC721URIStorage, Ownable, Pausable
     }
 
     modifier onlyAdminOrOwner() {
-        require(_vipList[msg.sender] || msg.sender == owner(), "Only admins or owner can access this function");
+        require(
+            _vipList[msg.sender] || msg.sender == owner(),
+            "Only admins or owner can access this function"
+        );
         _;
     }
 
     // Events
-    event PassTransfer(address indexed from, address indexed to, uint256 indexed tokenId);
+    event PassTransfer(
+        address indexed from,
+        address indexed to,
+        uint256 indexed tokenId
+    );
     event AuthenticityVerified(address indexed owner, uint256 indexed tokenId);
 
     /**
@@ -74,45 +86,100 @@ contract ComTpassERC721 is ERC721Enumerable, ERC721URIStorage, Ownable, Pausable
         mint(msg.sender, 20);
     }
 
-    // Admin and configuration functions
+    /**
+     * @dev Allows the owner to add addresses to the VIP list
+     * @param addresses The addresses to be added to the VIP list
+     */
     function addToVIPList(address[] memory addresses) public onlyOwner {
         for (uint256 i = 0; i < addresses.length; i++) {
             _vipList[addresses[i]] = true;
         }
     }
 
+    /**
+     * @dev Allows admins or the owner to add addresses to the whitelist
+     * @param addresses The addresses to be added to the whitelist
+     */
     function addToWhitelist(address[] memory addresses) public onlyAdminOrOwner {
         for (uint256 i = 0; i < addresses.length; i++) {
             _whitelisted[addresses[i]] = true;
         }
     }
 
-    function removeFromVIPList(address[] memory addresses) public onlyOwner {
-        for (uint256 i = 0; i < addresses.length; i++) {
-            _vipList[addresses[i]] = false;
-        }
+    /**
+     * @dev Allows a user to become a VIP by paying the VIP price
+     */
+    function becomeVIP() public payable {
+        require(!_vipList[msg.sender], "Already a VIP");
+        require(msg.value == _vipPrice, "Incorrect VIP price");
+
+        _vipList[msg.sender] = true;
     }
 
+    /**
+     * @dev Allows a user to remove their own VIP status
+     */
+    function removeVIP() public {
+        require(_vipList[msg.sender], "Not a VIP");
+
+        _vipList[msg.sender] = false;
+    }
+
+    /**
+     * @dev Revokes VIP status from a user
+     * @param user The address of the user to revoke VIP status from
+     * @notice Only the owner can call this function
+     */
+    function revokeVIP(address user) public onlyOwner {
+        require(_vipList[user], "Not a VIP");
+
+        _vipList[user] = false;
+    }
+
+    /**
+     * @dev Sets the base extension for token URIs
+     * @param newBaseExtension The new base extension
+     */
     function setBaseExtension(string memory newBaseExtension) public onlyOwner {
         _baseExtension = newBaseExtension;
     }
 
+    /**
+     * @dev Sets the base URI for token metadata
+     * @param newBaseURI The new base URI
+     */
     function setBaseURI(string memory newBaseURI) public onlyOwner {
         _baseUri = newBaseURI;
     }
 
+    /**
+     * @dev Sets the cost of minting an NFT
+     * @param newCost The new cost
+     */
     function setCost(uint256 newCost) public onlyOwner {
         _cost = newCost;
     }
 
+    /**
+     * @dev Sets the maximum mint amount per transaction
+     * @param newMaxMintAmount The new maximum mint amount
+     */
     function setMaxMintAmount(uint256 newMaxMintAmount) public onlyOwner {
         _maxMintAmount = newMaxMintAmount;
     }
 
+    /**
+     * @dev Sets the maximum supply of NFTs
+     * @param newMaxSupply The new maximum supply
+     */
     function setMaxSupply(uint256 newMaxSupply) public onlyOwner {
         _maxSupply = newMaxSupply;
     }
 
+    /**
+     * @dev Sets the price to upgrade to VIP status
+     * @param newVipPrice The new VIP price
+     */
     function setVipPrice(uint256 newVipPrice) public onlyOwner {
         _vipPrice = newVipPrice;
     }
@@ -128,9 +195,15 @@ contract ComTpassERC721 is ERC721Enumerable, ERC721URIStorage, Ownable, Pausable
         require(_whitelisted[msg.sender], "Not whitelisted");
         require(!paused(), "Sale paused");
         require(mintAmount > 0, "Need to mint at least 1 NFT");
-        require(mintAmount <= _maxMintAmount, "Max mint amount per transaction exceeded");
+        require(
+            mintAmount <= _maxMintAmount,
+            "Max mint amount per transaction exceeded"
+        );
         require(supply + mintAmount <= _maxSupply, "Exceeds max supply");
-        require(msg.value >= _cost * mintAmount, "Ether value sent is not correct");
+        require(
+            msg.value >= _cost * mintAmount,
+            "Ether value sent is not correct"
+        );
 
         for (uint256 i = 1; i <= mintAmount; i++) {
             _safeMint(to, supply + i);
@@ -144,7 +217,10 @@ contract ComTpassERC721 is ERC721Enumerable, ERC721URIStorage, Ownable, Pausable
      * @param tokenId The ID of the token to transfer
      */
     function transferPass(address to, uint256 tokenId) public {
-        require(_isApprovedOrOwner(msg.sender, tokenId), "Transfer not authorized");
+        require(
+            _isApprovedOrOwner(msg.sender, tokenId),
+            "Transfer not authorized"
+        );
         require(!_isContract(to), "Transfer to contract not allowed");
 
         _transfer(msg.sender, to, tokenId);
@@ -187,7 +263,12 @@ contract ComTpassERC721 is ERC721Enumerable, ERC721URIStorage, Ownable, Pausable
      * @param interfaceId The ID of the interface to check
      * @return A boolean indicating if the interface is supported
      */
-    function supportsInterface(bytes4 interfaceId) public view override(ERC721Enumerable, ERC721URIStorage) returns (bool) {
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC721Enumerable, ERC721URIStorage)
+        returns (bool)
+    {
         return super.supportsInterface(interfaceId);
     }
 
@@ -196,9 +277,20 @@ contract ComTpassERC721 is ERC721Enumerable, ERC721URIStorage, Ownable, Pausable
      * @param tokenId The ID of the token
      * @return The token URI
      */
-    function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
-        require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
-        return string(abi.encodePacked(_baseURI(), tokenId.toString(), _baseExtension));
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        override(ERC721, ERC721URIStorage)
+        returns (string memory)
+    {
+        require(
+            _exists(tokenId),
+            "ERC721Metadata: URI query for nonexistent token"
+        );
+        return
+            string(
+                abi.encodePacked(_baseURI(), tokenId.toString(), _baseExtension)
+            );
     }
 
     /**
@@ -207,7 +299,11 @@ contract ComTpassERC721 is ERC721Enumerable, ERC721URIStorage, Ownable, Pausable
      * @param to The address to transfer to
      * @param tokenId The ID of the token to transfer
      */
-    function transferFrom(address from, address to, uint256 tokenId) public override(ERC721, IERC721) {
+    function transferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public override(ERC721, IERC721) {
         super.transferFrom(from, to, tokenId);
         emit PassTransfer(from, to, tokenId);
     }
@@ -216,7 +312,10 @@ contract ComTpassERC721 is ERC721Enumerable, ERC721URIStorage, Ownable, Pausable
      * @dev Internal function to burn a token
      * @param tokenId The ID of the token to burn
      */
-    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
+    function _burn(uint256 tokenId)
+        internal
+        override(ERC721, ERC721URIStorage)
+    {
         super._burn(tokenId);
     }
 
@@ -240,11 +339,12 @@ contract ComTpassERC721 is ERC721Enumerable, ERC721URIStorage, Ownable, Pausable
      * @param tokenId The ID of the token to transfer
      * @param batchSize The number of tokens being transferred
      */
-    function _beforeTokenTransfer(address from, address to, uint256 tokenId, uint256 batchSize)
-        internal
-        whenNotPaused
-        override(ERC721, ERC721Enumerable)
-    {
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 tokenId,
+        uint256 batchSize
+    ) internal override(ERC721, ERC721Enumerable) whenNotPaused {
         super._beforeTokenTransfer(from, to, tokenId, batchSize);
     }
 }
